@@ -7,7 +7,7 @@ function Summary({ data, exclusoes }) {
     if (!exclusoes) return '';
 
     let report = '📋 RELATÓRIO DE EXCLUSÕES\n';
-    report += '=' .repeat(60) + '\n\n';
+    report += '='.repeat(60) + '\n\n';
 
     if (exclusoes.porMargemNegativa?.length > 0) {
       report += `🚫 MARGEM NEGATIVA (${exclusoes.porMargemNegativa.length})\n`;
