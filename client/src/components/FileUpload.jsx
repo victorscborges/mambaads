@@ -3,13 +3,19 @@ import './FileUpload.css';
 
 function FileUpload({ onUpload, loading }) {
   const fileInputRef = useRef(null);
-  const [tacos, setTacos] = useState(5);
+  const [tacos, setTacos] = useState('5');
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        onUpload(file, tacos);
+        const tacosValue = Number(tacos);
+        if (!Number.isFinite(tacosValue) || tacosValue <= 0 || tacosValue > 100) {
+          alert('Informe um TACOS valido entre 0.1 e 100 antes de enviar.');
+          return;
+        }
+
+        onUpload(file, tacosValue);
       } else {
         alert('Por favor, envie um arquivo Excel (.xlsx ou .xls)');
       }
@@ -53,7 +59,7 @@ function FileUpload({ onUpload, loading }) {
             max="100"
             step="0.5"
             value={tacos}
-            onChange={(e) => setTacos(parseFloat(e.target.value))}
+            onChange={(e) => setTacos(e.target.value)}
             disabled={loading}
           />
           <span className="tacos-help">

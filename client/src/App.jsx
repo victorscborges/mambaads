@@ -17,6 +17,9 @@ function App() {
   const handleFileUpload = async (file, tacos) => {
     setLoading(true);
     setError(null);
+    setCampaigns([]);
+    setSummary(null);
+    setExclusoes(null);
 
     try {
       const formData = new FormData();

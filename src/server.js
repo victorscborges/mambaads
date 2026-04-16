@@ -27,7 +27,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    const tacosObjetivo = parseFloat(req.body.tacos) || 5;
+    const tacosObjetivo = Number(req.body.tacos);
+    if (!Number.isFinite(tacosObjetivo) || tacosObjetivo <= 0 || tacosObjetivo > 100) {
+      return res.status(400).json({ error: 'TACOS invalido. Informe um valor entre 0.1 e 100.' });
+    }
+
     const result = await analyzeSpreadsheet(req.file.buffer, tacosObjetivo);
 
     res.json(result);

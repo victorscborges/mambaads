@@ -365,6 +365,47 @@ table tbody tr:nth-child(even) {
   font-size: 0.95em;
 }
 
+.exclusoes-header {
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.exclusoes-meta {
+  margin: 6px 0 0 0;
+  color: #6b7280;
+  font-size: 0.95em;
+}
+
+.exclusoes-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.exclusoes-content {
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+}
+
+.exclusoes-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
+.exclusoes-content.expanded {
+  max-height: 520px;
+  opacity: 1;
+  margin-top: 12px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.exclusao-grupo li::before {
+  content: "\2022 ";
+}
+
 @media (max-width: 768px) {
   .App-header h1 {
     font-size: 2em;
@@ -372,6 +413,11 @@ table tbody tr:nth-child(even) {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .exclusoes-actions,
+  .exclusoes-buttons {
+    width: 100%;
   }
 
   table {
