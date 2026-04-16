@@ -1,0 +1,106 @@
+.file-upload {
+  margin-bottom: 30px;
+}
+
+.upload-box {
+  background: white;
+  border: 3px dashed #FDB927;
+  border-radius: 10px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.upload-box:hover {
+  border-color: #fcc200;
+  background-color: #fffbf0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(253, 185, 39, 0.2);
+}
+
+.upload-icon {
+  font-size: 3em;
+  margin-bottom: 15px;
+}
+
+.upload-box h2 {
+  margin: 15px 0 10px 0;
+  color: #552583;
+  font-weight: 700;
+}
+
+.upload-box p {
+  color: #333;
+  font-size: 1.1em;
+  margin: 5px 0;
+  font-weight: 500;
+}
+
+.file-info {
+  display: block;
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 10px;
+}
+
+.tacos-section {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid #FDB927;
+}
+
+.tacos-section label {
+  display: block;
+  margin-bottom: 12px;
+  color: #552583;
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+.tacos-input-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.tacos-input-group input {
+  padding: 10px 15px;
+  border: 2px solid #FDB927;
+  border-radius: 5px;
+  font-size: 1em;
+  width: 120px;
+  font-weight: 600;
+  color: #552583;
+}
+
+.tacos-input-group input:focus {
+  outline: none;
+  border-color: #fcc200;
+  box-shadow: 0 0 0 3px rgba(253, 185, 39, 0.2);
+}
+
+.tacos-help {
+  color: #333;
+  font-size: 0.95em;
+  font-style: italic;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #FDB927;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
