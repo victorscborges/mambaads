@@ -5,6 +5,8 @@ import FileUpload from './components/FileUpload';
 import CampaignTable from './components/CampaignTable';
 import Summary from './components/Summary';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function App() {
   const [campaigns, setCampaigns] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -21,7 +23,7 @@ function App() {
       formData.append('file', file);
       formData.append('tacos', tacos);
 
-      const response = await axios.post('/api/upload', formData, {
+      const response = await axios.post(`${API_URL}/api/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
