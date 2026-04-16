@@ -65,11 +65,47 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
     };
   });
 
-  // Classificar em curvas
-  const classifiedProducts = products.map((product) => ({
-    ...product,
-    curve: classifyCurve(product, totalRevenue),
-  }));
+  // Calcular thresholds de Pareto 80/20 baseado no acumulado
+  const productsForThreshold = products.filter(p => p.faturamento > 0);
+  const { curvaAThreshold, curvaBThreshold } = (() => {
+    const sorted = [...productsForThreshold].sort((a, b) => b.faturamento - a.faturamento);
+    let accumulatedRevenue = 0;
+    let curvaAThreshold = 0;
+    let curvaBThreshold = 0;
+
+    for (let i = 0; i < sorted.length; i++) {
+      accumulatedRevenue += sorted[i].faturamento;
+      const accumulatedPercentage = (accumulatedRevenue / totalRevenue) * 100;
+
+      if (accumulatedPercentage >= 80 && curvaAThreshold === 0) {
+        curvaAThreshold = (sorted[i].faturamento / totalRevenue) * 100;
+      }
+
+      if (accumulatedPercentage >= 95 && curvaBThreshold === 0) {
+        curvaBThreshold = (sorted[i].faturamento / totalRevenue) * 100;
+        break;
+      }
+    }
+
+    return { curvaAThreshold: curvaAThreshold || 0, curvaBThreshold: curvaBThreshold || 0 };
+  })();
+
+  // Classificar em curvas usando thresholds calculados
+  const classifiedProducts = products.map((product) => {
+    const revenuePercentage = (product.faturamento / totalRevenue) * 100;
+    let curve = 'C';
+    
+    if (revenuePercentage >= curvaAThreshold) {
+      curve = 'A';
+    } else if (revenuePercentage >= curvaBThreshold) {
+      curve = 'B';
+    }
+
+    return {
+      ...product,
+      curve,
+    };
+  });
 
   // Filtrar produtos sem estoque (zero nas 3 colunas de estoque)
   const productsRemovedByStockZero = classifiedProducts.filter((p) => {

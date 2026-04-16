@@ -1,23 +1,72 @@
 /**
- * Classifica um produto em uma curva (A, B ou C) baseado no Pareto
- * Curva A: 20% dos produtos que geram ~80% do faturamento
- * Curva B: Intermediários
- * Curva C: Longa cauda
+ * Classifica curvas baseado em Pareto 80/20 acumulado
+ * PRECISA ser chamada após calcular os thresholds
+ */
+export function classifyCurveByThresholds(product, curvaAThreshold, curvaBThreshold) {
+  const revenuePercentage = product.revenuePercentage;
+
+  if (revenuePercentage >= curvaAThreshold) {
+    return 'A';
+  }
+  if (revenuePercentage >= curvaBThreshold) {
+    return 'B';
+  }
+  return 'C';
+}
+
+/**
+ * Calcula os thresholds de Pareto 80/20
+ * Ordena produtos por faturamento e encontra onde acumula 80% e 95%
+ */
+export function calculateParetoCurveThresholds(productsWithRevenue) {
+  if (productsWithRevenue.length === 0) {
+    return { curvaAThreshold: 0, curvaBThreshold: 0 };
+  }
+
+  // Ordenar por faturamento DESC
+  const sorted = [...productsWithRevenue].sort((a, b) => b.faturamento - a.faturamento);
+  const totalRevenue = sorted.reduce((sum, p) => sum + p.faturamento, 0);
+
+  let accumulatedRevenue = 0;
+  let curvaAThreshold = 0;
+  let curvaBThreshold = 0;
+
+  // Encontrar threshold de Curva A (80% acumulado)
+  for (let i = 0; i < sorted.length; i++) {
+    accumulatedRevenue += sorted[i].faturamento;
+    const accumulatedPercentage = (accumulatedRevenue / totalRevenue) * 100;
+
+    if (accumulatedPercentage >= 80 && curvaAThreshold === 0) {
+      curvaAThreshold = sorted[i].revenuePercentage;
+    }
+
+    if (accumulatedPercentage >= 95 && curvaBThreshold === 0) {
+      curvaBThreshold = sorted[i].revenuePercentage;
+      break;
+    }
+  }
+
+  // Garantir que B < A
+  if (curvaBThreshold >= curvaAThreshold && curvaBThreshold > 0) {
+    curvaBThreshold = Math.max(0, curvaAThreshold - 0.1);
+  }
+
+  return { curvaAThreshold, curvaBThreshold };
+}
+
+/**
+ * LEGADO: Classifica um produto em uma curva (A, B ou C) baseado no Pareto
+ * Mantida por compatibilidade
  */
 export function classifyCurve(product, totalRevenue) {
   const revenuePercentage = (product.faturamento / totalRevenue) * 100;
 
-  // Acumulado de 80% = Curva A
   if (revenuePercentage >= 5) {
     return 'A';
   }
-
-  // Intermediário = Curva B
   if (revenuePercentage >= 1) {
     return 'B';
   }
-
-  // Resto = Curva C
   return 'C';
 }
 

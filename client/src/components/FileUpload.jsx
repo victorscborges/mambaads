@@ -22,6 +22,7 @@ function FileUpload({ onUpload, loading }) {
 
   return (
     <div className="file-upload">
+      <div className="tacos-notice">ℹ️  Preencha o <strong>TACOS (%)</strong> antes de enviar a planilha</div>
       <div className="upload-box" onClick={handleClick}>
         {loading ? (
           <>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 function Summary({ data, exclusoes }) {
   const [showExclusoesReport, setShowExclusoesReport] = useState(false);
+  const [showExclusoes, setShowExclusoes] = useState(true);
 
   const generateExclusoesReport = () => {
     if (!exclusoes) return '';
@@ -97,25 +98,35 @@ function Summary({ data, exclusoes }) {
         <div className="exclusoes-section">
           <div className="exclusoes-header">
             <h3>⚠️ Análise de Exclusões</h3>
+            <button
+              className="toggle-exclusoes-btn"
+              onClick={() => setShowExclusoes(!showExclusoes)}
+            >
+              {showExclusoes ? '▲ Ocultar' : '▼ Exibir'}
+            </button>
             <div className="exclusoes-buttons">
-              <button
-                className="report-button-small"
-                onClick={() => setShowExclusoesReport(!showExclusoesReport)}
-              >
-                {showExclusoesReport ? '✕ Fechar Relatório' : '📄 Ver Relatório'}
-              </button>
-              {showExclusoesReport && (
-                <button
-                  className="copy-report-button-small"
-                  onClick={handleCopyExclusoesReport}
-                >
-                  📋 Copiar Relatório
-                </button>
+              {showExclusoes && (
+                <>
+                  <button
+                    className="report-button-small"
+                    onClick={() => setShowExclusoesReport(!showExclusoesReport)}
+                  >
+                    {showExclusoesReport ? '✗ Fechar Relatório' : '📄 Ver Relatório'}
+                  </button>
+                  {showExclusoesReport && (
+                    <button
+                      className="copy-report-button-small"
+                      onClick={handleCopyExclusoesReport}
+                    >
+                      📋 Copiar Relatório
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
 
-          {showExclusoesReport ? (
+          {showExclusoes && showExclusoesReport ? (
             <div className="report-box">
               <pre>{generateExclusoesReport()}</pre>
             </div>
