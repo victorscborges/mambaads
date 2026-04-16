@@ -8,11 +8,17 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 // Rotas
 app.post('/api/upload', upload.single('file'), async (req, res) => {
@@ -21,10 +27,9 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // TACOS Objetivo vem como string, converter para número
     const tacosObjetivo = parseFloat(req.body.tacos) || 5;
-
     const result = await analyzeSpreadsheet(req.file.buffer, tacosObjetivo);
+
     res.json(result);
   } catch (error) {
     console.error('Erro ao processar arquivo:', error);
@@ -32,6 +37,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Backend rodando na porta ${PORT}`);
 });
