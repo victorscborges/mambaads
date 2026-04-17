@@ -87,9 +87,7 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
 
   const productsRemovedByZeroRevenue = productsWithValidMargin.filter((product) => product.faturamento === 0);
   const productsWithRevenue = productsWithValidMargin.filter((product) => product.faturamento > 0);
-
-  const isolatedProducts = productsWithRevenue.filter((product) => product.revenuePercentage >= 1);
-  const groupableProducts = productsWithRevenue.filter((product) => product.revenuePercentage < 1);
+  const opportunityProducts = productsWithRevenue.filter((product) => product.adsInvestment <= 0);
 
   console.log('\n[ANALYZER] Resumo da analise:');
   console.log(`  Total de produtos: ${products.length}`);
@@ -98,15 +96,70 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
   console.log(`  Produtos com margem negativa: ${productsRemovedByNegativeMargin.length}`);
   console.log(`  Produtos com faturamento zero: ${productsRemovedByZeroRevenue.length}`);
   console.log(`  Produtos validos para campanhas: ${productsWithRevenue.length}`);
+  console.log(`  Produtos sem ADS com oportunidade: ${opportunityProducts.length}`);
   console.log(`  Faturamento total: R$ ${totalRevenue.toFixed(2)}`);
   console.log(`  TACOS objetivo: ${tacosObjetivo}%`);
 
+  const campaigns = buildCampaigns(productsWithRevenue, totalRevenue, tacosObjetivo);
+  const opportunityRevenue = opportunityProducts.reduce((sum, product) => sum + product.faturamento, 0);
+  const opportunityCampaigns = buildCampaigns(opportunityProducts, opportunityRevenue, tacosObjetivo);
+
+  const totalDailyBudgetRounded = roundToTwo(
+    campaigns.reduce((sum, campaign) => sum + campaign.orcamentoDiario, 0)
+  );
+  const totalMonthlyBudgetRounded = roundToTwo(totalDailyBudgetRounded * 30);
+  const totalOpportunityBudgetRounded = roundToTwo(
+    opportunityCampaigns.reduce((sum, campaign) => sum + campaign.orcamentoDiario, 0)
+  );
+  const totalOpportunityMonthlyBudgetRounded = roundToTwo(totalOpportunityBudgetRounded * 30);
+
+  console.log(`  Campanhas isoladas: ${campaigns.filter((campaign) => campaign.tipo === 'Isolada').length}`);
+  console.log(`  Campanhas agrupadas: ${campaigns.filter((campaign) => campaign.tipo === 'Agrupada').length}`);
+  console.log(`  Campanhas de oportunidade: ${opportunityCampaigns.length}`);
+  console.log(`  Orcamento diario arredondado: R$ ${totalDailyBudgetRounded.toFixed(2)}`);
+  console.log(`  Orcamento diario de oportunidades: R$ ${totalOpportunityBudgetRounded.toFixed(2)}\n`);
+
+  return {
+    success: true,
+    resumo: {
+      totalProdutos: products.length,
+      produtosAnalisados: productsWithRevenue.length,
+      faturamentoTotal: roundToTwo(totalRevenue),
+      campanhasIsoladas: campaigns.filter((campaign) => campaign.tipo === 'Isolada').length,
+      campanhasAgrupadas: campaigns.filter((campaign) => campaign.tipo === 'Agrupada').length,
+      oportunidadesProdutos: opportunityProducts.length,
+      oportunidadesCampanhas: opportunityCampaigns.length,
+      tacosObjetivo,
+      orcamentoDiarioTotal: totalDailyBudgetRounded,
+      orcamentoMensalTotal: totalMonthlyBudgetRounded,
+    },
+    oportunidades: {
+      quantidadeProdutos: opportunityProducts.length,
+      quantidadeCampanhas: opportunityCampaigns.length,
+      orcamentoDiarioTotal: totalOpportunityBudgetRounded,
+      orcamentoMensalTotal: totalOpportunityMonthlyBudgetRounded,
+      campanhas: opportunityCampaigns,
+    },
+    exclusoes: {
+      porMargemNegativa: productsRemovedByNegativeMargin,
+      porHighAcos: productsRemovedByHighAcos,
+      porFaturamentoZero: productsRemovedByZeroRevenue,
+      porZeroStockComFaturamento: productsZeroStockWithRevenue,
+      porZeroStockSemFaturamento: productsZeroStockWithoutRevenue,
+    },
+    campanhas: campaigns,
+  };
+}
+
+function buildCampaigns(productsForCampaigns, budgetBaseRevenue, tacosObjetivo) {
+  const isolatedProducts = productsForCampaigns.filter((product) => product.revenuePercentage >= 1);
+  const groupableProducts = productsForCampaigns.filter((product) => product.revenuePercentage < 1);
   const revenueByCurve = { A: 0, B: 0, C: 0 };
+  const campaigns = [];
+
   [...isolatedProducts, ...groupableProducts].forEach((product) => {
     revenueByCurve[product.curve] = (revenueByCurve[product.curve] || 0) + product.faturamento;
   });
-
-  const campaigns = [];
 
   isolatedProducts.forEach((product) => {
     const revenuePercentageInCurve =
@@ -141,40 +194,10 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
   });
 
   const totalCampaignRevenue = campaigns.reduce((sum, campaign) => sum + campaign.faturamento, 0);
-  const totalDailyBudgetTarget = calculateDailyBudgetTacos(totalRevenue, tacosObjetivo);
+  const totalDailyBudgetTarget = calculateDailyBudgetTacos(budgetBaseRevenue, tacosObjetivo);
   distributeRoundedDailyBudgets(campaigns, totalCampaignRevenue, totalDailyBudgetTarget);
 
-  const totalDailyBudgetRounded = roundToTwo(
-    campaigns.reduce((sum, campaign) => sum + campaign.orcamentoDiario, 0)
-  );
-  const totalMonthlyBudgetRounded = roundToTwo(totalDailyBudgetRounded * 30);
-
-  console.log(`  Campanhas isoladas: ${campaigns.filter((campaign) => campaign.tipo === 'Isolada').length}`);
-  console.log(`  Campanhas agrupadas: ${campaigns.filter((campaign) => campaign.tipo === 'Agrupada').length}`);
-  console.log(`  Orçamento diario alvo: R$ ${totalDailyBudgetTarget.toFixed(2)}`);
-  console.log(`  Orçamento diario arredondado: R$ ${totalDailyBudgetRounded.toFixed(2)}\n`);
-
-  return {
-    success: true,
-    resumo: {
-      totalProdutos: products.length,
-      produtosAnalisados: productsWithRevenue.length,
-      faturamentoTotal: roundToTwo(totalRevenue),
-      campanhasIsoladas: isolatedProducts.length,
-      campanhasAgrupadas: campaigns.filter((campaign) => campaign.tipo === 'Agrupada').length,
-      tacosObjetivo,
-      orcamentoDiarioTotal: totalDailyBudgetRounded,
-      orcamentoMensalTotal: totalMonthlyBudgetRounded,
-    },
-    exclusoes: {
-      porMargemNegativa: productsRemovedByNegativeMargin,
-      porHighAcos: productsRemovedByHighAcos,
-      porFaturamentoZero: productsRemovedByZeroRevenue,
-      porZeroStockComFaturamento: productsZeroStockWithRevenue,
-      porZeroStockSemFaturamento: productsZeroStockWithoutRevenue,
-    },
-    campanhas: campaigns.sort((a, b) => b.faturamento - a.faturamento),
-  };
+  return campaigns.sort((a, b) => b.faturamento - a.faturamento);
 }
 
 function getNumericCell(row, candidates) {

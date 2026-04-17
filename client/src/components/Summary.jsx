@@ -1,8 +1,14 @@
 import React, { useMemo, useState } from 'react';
 
-function Summary({ data, exclusoes }) {
+function Summary({ data, oportunidades, exclusoes }) {
+  const [showOpportunities, setShowOpportunities] = useState(false);
+  const [showOpportunitiesReport, setShowOpportunitiesReport] = useState(false);
   const [showExclusoesReport, setShowExclusoesReport] = useState(false);
   const [showExclusoes, setShowExclusoes] = useState(false);
+
+  const hasOportunidades = useMemo(() => {
+    return Boolean(oportunidades?.quantidadeProdutos > 0 && oportunidades?.campanhas?.length > 0);
+  }, [oportunidades]);
 
   const hasExclusoes = useMemo(() => {
     if (!exclusoes) {
@@ -21,6 +27,18 @@ function Summary({ data, exclusoes }) {
       return total + (Array.isArray(items) ? items.length : 0);
     }, 0);
   }, [exclusoes]);
+
+  const opportunitiesReport = useMemo(() => {
+    if (!hasOportunidades) {
+      return '';
+    }
+
+    return buildCampaignsReport('RELATORIO DE OPORTUNIDADES', oportunidades.campanhas, {
+      quantidadeProdutos: oportunidades.quantidadeProdutos,
+      orcamentoDiarioTotal: oportunidades.orcamentoDiarioTotal,
+      orcamentoMensalTotal: oportunidades.orcamentoMensalTotal,
+    });
+  }, [hasOportunidades, oportunidades]);
 
   const exclusoesReport = useMemo(() => {
     if (!exclusoes) {
@@ -61,21 +79,11 @@ function Summary({ data, exclusoes }) {
     }
 
     if (exclusoes.porZeroStockSemFaturamento?.length > 0) {
-      report += `ESTOQUE ZERADO (SEM FATURAMENTO) (${exclusoes.porZeroStockSemFaturamento.length})\n`;
-      report += '-'.repeat(60) + '\n';
-      exclusoes.porZeroStockSemFaturamento.forEach((product) => {
-        report += `- ${product.name}\n`;
-        report += `  Item Id: ${product.itemId}\n\n`;
-      });
+      report += `ESTOQUE ZERADO (SEM FATURAMENTO) (${exclusoes.porZeroStockSemFaturamento.length})\n\n`;
     }
 
     if (exclusoes.porFaturamentoZero?.length > 0) {
-      report += `FATURAMENTO ZERO (${exclusoes.porFaturamentoZero.length})\n`;
-      report += '-'.repeat(60) + '\n';
-      exclusoes.porFaturamentoZero.forEach((product) => {
-        report += `- ${product.name}\n`;
-        report += `  Item Id: ${product.itemId}\n\n`;
-      });
+      report += `FATURAMENTO ZERO (${exclusoes.porFaturamentoZero.length})\n\n`;
     }
 
     return report;
@@ -83,6 +91,10 @@ function Summary({ data, exclusoes }) {
 
   const handleCopyExclusoesReport = async () => {
     await navigator.clipboard.writeText(exclusoesReport);
+  };
+
+  const handleCopyOpportunitiesReport = async () => {
+    await navigator.clipboard.writeText(opportunitiesReport);
   };
 
   return (
@@ -110,6 +122,11 @@ function Summary({ data, exclusoes }) {
           <div className="subtitle">{data.campanhasIsoladas} isoladas + {data.campanhasAgrupadas} agrupadas</div>
         </div>
         <div className="summary-card">
+          <h3>Oportunidades</h3>
+          <div className="value">{data.oportunidadesProdutos}</div>
+          <div className="subtitle">Produtos que podem entrar em ADS</div>
+        </div>
+        <div className="summary-card">
           <h3>TACOS Objetivo</h3>
           <div className="value">{Number(data.tacosObjetivo).toFixed(1)}%</div>
           <div className="subtitle">Valor considerado no calculo</div>
@@ -120,6 +137,73 @@ function Summary({ data, exclusoes }) {
           <div className="subtitle">Soma dos valores arredondados</div>
         </div>
       </div>
+
+      {hasOportunidades && (
+        <div className="exclusoes-section">
+          <div className="exclusoes-header">
+            <div>
+              <h3>Analise de Oportunidades</h3>
+              <p className="exclusoes-meta">
+                {oportunidades.quantidadeProdutos} produtos sem ADS podem entrar em publicidade em{' '}
+                {oportunidades.quantidadeCampanhas} novas campanhas
+              </p>
+            </div>
+
+            <div className="exclusoes-actions">
+              <button
+                className="toggle-exclusoes-btn"
+                onClick={() => setShowOpportunities((value) => !value)}
+              >
+                {showOpportunities ? 'Ocultar lista' : 'Exibir lista'}
+              </button>
+
+              {showOpportunities && (
+                <>
+                  <button
+                    className="report-button-small"
+                    onClick={() => setShowOpportunitiesReport((value) => !value)}
+                  >
+                    {showOpportunitiesReport ? 'Fechar relatorio' : 'Ver relatorio'}
+                  </button>
+                  {showOpportunitiesReport && (
+                    <button
+                      className="copy-report-button-small"
+                      onClick={handleCopyOpportunitiesReport}
+                    >
+                      Copiar relatorio
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className={`exclusoes-content ${showOpportunities ? 'expanded' : 'collapsed'}`}>
+            {showOpportunities &&
+              (showOpportunitiesReport ? (
+                <div className="report-box">
+                  <pre>{opportunitiesReport}</pre>
+                </div>
+              ) : (
+                <>
+                  {oportunidades.campanhas.map((campaign, index) => (
+                    <div className="oportunidade-grupo" key={`${campaign.nome}-${index}`}>
+                      <h4>{campaign.nome}</h4>
+                      <p>
+                        Tipo: {campaign.tipo} | ROAS Objetivo: {campaign.roasObjetivo}x | Orcamento Diario: R${' '}
+                        {campaign.orcamentoDiario.toFixed(2)}
+                      </p>
+                      <p>
+                        Produtos: {campaign.quantidadeProdutos} | Faturamento: R$ {campaign.faturamento.toFixed(2)}
+                      </p>
+                      <p>MLBs: {campaign.mlbs.join(', ')}</p>
+                    </div>
+                  ))}
+                </>
+              ))}
+          </div>
+        </div>
+      )}
 
       {hasExclusoes && (
         <div className="exclusoes-section">
@@ -210,26 +294,12 @@ function Summary({ data, exclusoes }) {
                   {exclusoes.porZeroStockSemFaturamento?.length > 0 && (
                     <div className="exclusao-grupo">
                       <h4>Estoque Zerado (sem Faturamento) ({exclusoes.porZeroStockSemFaturamento.length})</h4>
-                      <ul>
-                        {exclusoes.porZeroStockSemFaturamento.map((product, index) => (
-                          <li key={`zero-stock-empty-${index}`}>
-                            <strong>{product.name}</strong> | Item Id: {product.itemId}
-                          </li>
-                        ))}
-                      </ul>
                     </div>
                   )}
 
                   {exclusoes.porFaturamentoZero?.length > 0 && (
                     <div className="exclusao-grupo">
                       <h4>Faturamento Zero ({exclusoes.porFaturamentoZero.length})</h4>
-                      <ul>
-                        {exclusoes.porFaturamentoZero.map((product, index) => (
-                          <li key={`revenue-zero-${index}`}>
-                            <strong>{product.name}</strong> | Item Id: {product.itemId}
-                          </li>
-                        ))}
-                      </ul>
                     </div>
                   )}
                 </>
@@ -239,6 +309,38 @@ function Summary({ data, exclusoes }) {
       )}
     </div>
   );
+}
+
+function buildCampaignsReport(title, campaigns, totals) {
+  let report = '='.repeat(60) + '\n';
+  report += `${title}\n`;
+  report += '='.repeat(60) + '\n\n';
+  report += `Total de Campanhas: ${campaigns.length}\n`;
+  report += `Produtos Elegiveis: ${totals.quantidadeProdutos}\n`;
+  report += `Orcamento Diario Total: R$ ${Number(totals.orcamentoDiarioTotal).toFixed(2)}\n`;
+  report += `Orcamento Mensal Total: R$ ${Number(totals.orcamentoMensalTotal).toFixed(2)}\n`;
+  report += `Faturamento Total: R$ ${campaigns.reduce((sum, campaign) => sum + campaign.faturamento, 0).toFixed(2)}\n\n`;
+  report += '-'.repeat(60) + '\n\n';
+
+  campaigns.forEach((campaign, index) => {
+    report += `${index + 1}. ${campaign.nome}\n`;
+    report += `   Tipo: ${campaign.tipo}\n`;
+    report += `   ROAS Objetivo: ${campaign.roasObjetivo}x\n`;
+    report += `   Orcamento Diario: R$ ${campaign.orcamentoDiario.toFixed(2)}\n`;
+    report += `   Quantidade de Produtos: ${campaign.quantidadeProdutos}\n`;
+    report += '   MLBs:\n';
+    campaign.mlbs.forEach((mlb) => {
+      report += `      - ${mlb}\n`;
+    });
+    report += '\n';
+  });
+
+  report += '-'.repeat(60) + '\n';
+  report += `Orcamento Diario TOTAL: R$ ${Number(totals.orcamentoDiarioTotal).toFixed(2)}\n`;
+  report += `Orcamento Mensal TOTAL: R$ ${Number(totals.orcamentoMensalTotal).toFixed(2)}\n`;
+  report += '='.repeat(60) + '\n';
+
+  return report;
 }
 
 export default Summary;

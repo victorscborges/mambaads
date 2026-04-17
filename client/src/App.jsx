@@ -10,6 +10,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 function App() {
   const [campaigns, setCampaigns] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [opportunities, setOpportunities] = useState(null);
   const [exclusoes, setExclusoes] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,6 +20,7 @@ function App() {
     setError(null);
     setCampaigns([]);
     setSummary(null);
+    setOpportunities(null);
     setExclusoes(null);
 
     try {
@@ -35,6 +37,7 @@ function App() {
       if (response.data.success) {
         setCampaigns(response.data.campanhas);
         setSummary(response.data.resumo);
+        setOpportunities(response.data.oportunidades);
         setExclusoes(response.data.exclusoes);
       }
     } catch (err) {
@@ -57,7 +60,7 @@ function App() {
 
         {error && <div className="error-message">{error}</div>}
 
-        {summary && <Summary data={summary} exclusoes={exclusoes} />}
+        {summary && <Summary data={summary} oportunidades={opportunities} exclusoes={exclusoes} />}
 
         {campaigns.length > 0 && <CampaignTable campaigns={campaigns} />}
       </main>

@@ -334,9 +334,23 @@ table tbody tr:nth-child(even) {
   border-radius: 4px;
 }
 
+.oportunidade-grupo {
+  background-color: #ecfdf3;
+  border-left: 4px solid #22c55e;
+  padding: 12px 15px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+}
+
 .exclusao-grupo h4 {
   margin: 0 0 8px 0;
   color: #856404;
+  font-size: 1em;
+}
+
+.oportunidade-grupo h4 {
+  margin: 0 0 8px 0;
+  color: #166534;
   font-size: 1em;
 }
 
@@ -362,6 +376,12 @@ table tbody tr:nth-child(even) {
 .exclusao-grupo p {
   margin: 8px 0;
   color: #856404;
+  font-size: 0.95em;
+}
+
+.oportunidade-grupo p {
+  margin: 8px 0;
+  color: #166534;
   font-size: 0.95em;
 }
 
