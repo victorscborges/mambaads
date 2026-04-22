@@ -85,7 +85,7 @@ export function getRoasTarget(curve, revenuePercentageInCurve = 50) {
   return roasOptions.low;
 }
 
-function getTicketRange(ticket) {
+export function getTicketRange(ticket) {
   if (ticket <= 0) {
     return null;
   }

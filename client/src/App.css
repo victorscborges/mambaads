@@ -385,6 +385,41 @@ table tbody tr:nth-child(even) {
   font-size: 0.95em;
 }
 
+.decision-criteria {
+  margin: 10px 0 0 0;
+  padding-left: 18px;
+}
+
+.decision-criteria li {
+  margin-bottom: 6px;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.oportunidade-grupo .decision-criteria li,
+.campaign-criteria li {
+  color: #166534;
+}
+
+.campaign-criteria {
+  margin-top: 10px;
+}
+
+.decision-group-criterion {
+  margin: 8px 0 10px 0;
+  line-height: 1.5;
+}
+
+.decision-item-label,
+.decision-item-criterion {
+  display: block;
+  line-height: 1.5;
+}
+
+.decision-item-criterion {
+  margin-top: 4px;
+}
+
 .exclusoes-header {
   align-items: flex-start;
   gap: 16px;

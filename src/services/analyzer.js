@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { generateCampaignName, getRoasTarget, groupProducts } from '../utils/campaignLogic.js';
+import { generateCampaignName, getRoasTarget, getTicketRange, groupProducts } from '../utils/campaignLogic.js';
 
 const REVENUE_HEADERS = ['Faturamento', 'faturamento'];
 const MARGIN_PERCENT_HEADERS = ['Margem %', 'margem %', 'Margem', 'margem'];
@@ -16,6 +16,10 @@ const CPC_HEADERS = ['CPC', 'cpc'];
 const STOCK_MAIN_HEADERS = ['Estoque Principal', 'estoque principal'];
 const STOCK_SELLER_HEADERS = ['Estoque Seller', 'estoque seller'];
 const STOCK_FULL_HEADERS = ['Estoque Full', 'estoque full'];
+const MAX_ACOS = 0.2;
+const ISOLATED_REVENUE_THRESHOLD = 1;
+const CURVE_A_CUMULATIVE_THRESHOLD = 80;
+const CURVE_B_CUMULATIVE_THRESHOLD = 95;
 
 export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -79,8 +83,8 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
   const productsZeroStockWithoutRevenue = productsRemovedByStockZero.filter((product) => product.faturamento === 0);
 
   const productsWithStock = classifiedProducts.filter((product) => !hasZeroStockInAllLocations(product));
-  const productsWithGoodAcos = productsWithStock.filter((product) => product.acos <= 0.2);
-  const productsRemovedByHighAcos = productsWithStock.filter((product) => product.acos > 0.2);
+  const productsWithGoodAcos = productsWithStock.filter((product) => product.acos <= MAX_ACOS);
+  const productsRemovedByHighAcos = productsWithStock.filter((product) => product.acos > MAX_ACOS);
 
   const productsRemovedByNegativeMargin = productsWithGoodAcos.filter((product) => product.margem < 0);
   const productsWithValidMargin = productsWithGoodAcos.filter((product) => product.margem >= 0);
@@ -100,9 +104,14 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
   console.log(`  Faturamento total: R$ ${totalRevenue.toFixed(2)}`);
   console.log(`  TACOS objetivo: ${tacosObjetivo}%`);
 
-  const campaigns = buildCampaigns(productsWithRevenue, totalRevenue, tacosObjetivo);
+  const campaigns = buildCampaigns(productsWithRevenue, totalRevenue, tacosObjetivo, 'campanhas');
   const opportunityRevenue = opportunityProducts.reduce((sum, product) => sum + product.faturamento, 0);
-  const opportunityCampaigns = buildCampaigns(opportunityProducts, opportunityRevenue, tacosObjetivo);
+  const opportunityCampaigns = buildCampaigns(
+    opportunityProducts,
+    opportunityRevenue,
+    tacosObjetivo,
+    'oportunidades'
+  );
 
   const totalDailyBudgetRounded = roundToTwo(
     campaigns.reduce((sum, campaign) => sum + campaign.orcamentoDiario, 0)
@@ -141,19 +150,29 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
       campanhas: opportunityCampaigns,
     },
     exclusoes: {
-      porMargemNegativa: productsRemovedByNegativeMargin,
-      porHighAcos: productsRemovedByHighAcos,
-      porFaturamentoZero: productsRemovedByZeroRevenue,
-      porZeroStockComFaturamento: productsZeroStockWithRevenue,
-      porZeroStockSemFaturamento: productsZeroStockWithoutRevenue,
+      porMargemNegativa: annotateExcludedProducts(productsRemovedByNegativeMargin, 'margem-negativa'),
+      porHighAcos: annotateExcludedProducts(productsRemovedByHighAcos, 'high-acos'),
+      porFaturamentoZero: annotateExcludedProducts(productsRemovedByZeroRevenue, 'faturamento-zero'),
+      porZeroStockComFaturamento: annotateExcludedProducts(
+        productsZeroStockWithRevenue,
+        'zero-stock-com-faturamento'
+      ),
+      porZeroStockSemFaturamento: annotateExcludedProducts(
+        productsZeroStockWithoutRevenue,
+        'zero-stock-sem-faturamento'
+      ),
     },
     campanhas: campaigns,
   };
 }
 
-function buildCampaigns(productsForCampaigns, budgetBaseRevenue, tacosObjetivo) {
-  const isolatedProducts = productsForCampaigns.filter((product) => product.revenuePercentage >= 1);
-  const groupableProducts = productsForCampaigns.filter((product) => product.revenuePercentage < 1);
+function buildCampaigns(productsForCampaigns, budgetBaseRevenue, tacosObjetivo, analysisType = 'campanhas') {
+  const isolatedProducts = productsForCampaigns.filter(
+    (product) => product.revenuePercentage >= ISOLATED_REVENUE_THRESHOLD
+  );
+  const groupableProducts = productsForCampaigns.filter(
+    (product) => product.revenuePercentage < ISOLATED_REVENUE_THRESHOLD
+  );
   const revenueByCurve = { A: 0, B: 0, C: 0 };
   const campaigns = [];
 
@@ -173,6 +192,11 @@ function buildCampaigns(productsForCampaigns, budgetBaseRevenue, tacosObjetivo) 
       mlbs: [product.itemId],
       quantidadeProdutos: 1,
       faturamento: roundToTwo(product.faturamento),
+      curva: product.curve,
+      faixaTicket: getTicketRange(product.ticket || 0),
+      participacaoFaturamentoTotal: roundToTwo(product.revenuePercentage),
+      participacaoNaCurva: roundToTwo(revenuePercentageInCurve),
+      tipoAnalise: analysisType,
     });
   });
 
@@ -190,12 +214,24 @@ function buildCampaigns(productsForCampaigns, budgetBaseRevenue, tacosObjetivo) 
       mlbs: group.products.map((product) => product.itemId),
       quantidadeProdutos: group.products.length,
       faturamento: roundToTwo(groupRevenue),
+      curva: group.curve,
+      faixaTicket: group.ticketRange,
+      participacaoFaturamentoTotal:
+        budgetBaseRevenue > 0 ? roundToTwo((groupRevenue / budgetBaseRevenue) * 100) : 0,
+      participacaoNaCurva: roundToTwo(revenuePercentageInCurve),
+      tipoAnalise: analysisType,
     });
   });
 
   const totalCampaignRevenue = campaigns.reduce((sum, campaign) => sum + campaign.faturamento, 0);
   const totalDailyBudgetTarget = calculateDailyBudgetTacos(budgetBaseRevenue, tacosObjetivo);
   distributeRoundedDailyBudgets(campaigns, totalCampaignRevenue, totalDailyBudgetTarget);
+
+  campaigns.forEach((campaign) => {
+    campaign.participacaoFaturamentoCampanhas =
+      totalCampaignRevenue > 0 ? roundToTwo((campaign.faturamento / totalCampaignRevenue) * 100) : 0;
+    campaign.criterios = buildCampaignCriteria(campaign, tacosObjetivo, totalDailyBudgetTarget);
+  });
 
   return campaigns.sort((a, b) => b.faturamento - a.faturamento);
 }
@@ -282,11 +318,11 @@ function calculateCurveThresholds(products, totalRevenue) {
     const accumulatedPercentage = (accumulatedRevenue / totalRevenue) * 100;
     const revenuePercentage = (product.faturamento / totalRevenue) * 100;
 
-    if (accumulatedPercentage >= 80 && !Number.isFinite(curvaAThreshold)) {
+    if (accumulatedPercentage >= CURVE_A_CUMULATIVE_THRESHOLD && !Number.isFinite(curvaAThreshold)) {
       curvaAThreshold = revenuePercentage;
     }
 
-    if (accumulatedPercentage >= 95 && !Number.isFinite(curvaBThreshold)) {
+    if (accumulatedPercentage >= CURVE_B_CUMULATIVE_THRESHOLD && !Number.isFinite(curvaBThreshold)) {
       curvaBThreshold = revenuePercentage;
       break;
     }
@@ -338,6 +374,100 @@ function distributeRoundedDailyBudgets(campaigns, totalCampaignRevenue, totalDai
     const budgetBeforeRounding = totalDailyBudgetTarget * revenueShare;
     campaign.orcamentoDiario = Math.ceil(budgetBeforeRounding / 5) * 5;
   });
+}
+
+function annotateExcludedProducts(products, reason) {
+  return products.map((product) => ({
+    ...product,
+    criterioDecisao: buildExclusionCriterion(product, reason),
+  }));
+}
+
+function buildExclusionCriterion(product, reason) {
+  switch (reason) {
+    case 'margem-negativa':
+      return `Margem abaixo de 0% (${formatPercentage(product.margem)}), apos manter apenas produtos com estoque disponivel e ACOS ate ${formatPercentage(MAX_ACOS * 100)}.`;
+    case 'high-acos':
+      return `ACOS acima de ${formatPercentage(MAX_ACOS * 100)} (${formatPercentage(product.acos * 100)}), considerando apenas produtos com estoque disponivel.`;
+    case 'faturamento-zero':
+      return `Faturamento igual a R$ ${formatMoney(product.faturamento)} apos passar por estoque disponivel, ACOS ate ${formatPercentage(MAX_ACOS * 100)} e margem nao negativa.`;
+    case 'zero-stock-com-faturamento':
+      return `Estoque zerado em todos os pontos (principal ${product.estoquePrincipal}, seller ${product.estoqueSeller} e full ${product.estoqueFull}) com faturamento acima de zero (R$ ${formatMoney(product.faturamento)}).`;
+    case 'zero-stock-sem-faturamento':
+      return `Estoque zerado em todos os pontos (principal ${product.estoquePrincipal}, seller ${product.estoqueSeller} e full ${product.estoqueFull}) com faturamento igual a R$ ${formatMoney(product.faturamento)}.`;
+    default:
+      return 'Produto fora da campanha final pelos filtros de elegibilidade da analise.';
+  }
+}
+
+function buildCampaignCriteria(campaign, tacosObjetivo, totalDailyBudgetTarget) {
+  const criteria = [];
+
+  if (campaign.tipoAnalise === 'oportunidades') {
+    criteria.push(
+      `Oportunidade criada apenas com produtos sem investimento em ADS, que ainda mantiveram estoque disponivel, ACOS ate ${formatPercentage(
+        MAX_ACOS * 100
+      )}, margem nao negativa e faturamento acima de zero.`
+    );
+  } else {
+    criteria.push(
+      `Campanha final composta apenas por produtos com estoque disponivel, ACOS ate ${formatPercentage(
+        MAX_ACOS * 100
+      )}, margem nao negativa e faturamento acima de zero.`
+    );
+  }
+
+  criteria.push(
+    `Curva ${campaign.curva} definida pela classificacao ABC de faturamento acumulado: ate ${formatPercentage(
+      CURVE_A_CUMULATIVE_THRESHOLD
+    )} para A, ate ${formatPercentage(CURVE_B_CUMULATIVE_THRESHOLD)} para B e restante em C.`
+  );
+
+  if (campaign.tipo === 'Isolada') {
+    criteria.push(
+      `Campanha isolada porque o produto representa ${formatPercentage(
+        campaign.participacaoFaturamentoTotal
+      )} do faturamento total, atingindo o corte minimo de ${formatPercentage(
+        ISOLATED_REVENUE_THRESHOLD
+      )}.`
+    );
+  } else {
+    const faixaTicketText = campaign.faixaTicket
+      ? ` e compartilham a faixa de ticket ${campaign.faixaTicket}`
+      : '';
+
+    criteria.push(
+      `Campanha agrupada porque os produtos do grupo ficaram abaixo de ${formatPercentage(
+        ISOLATED_REVENUE_THRESHOLD
+      )} do faturamento total por item${faixaTicketText}, alem da mesma curva ${campaign.curva}.`
+    );
+  }
+
+  criteria.push(
+    `ROAS objetivo de ${campaign.roasObjetivo}x definido pela curva ${campaign.curva} e pela participacao de ${formatPercentage(
+      campaign.participacaoNaCurva
+    )} dentro da propria curva.`
+  );
+
+  criteria.push(
+    `Orcamento diario de R$ ${formatMoney(
+      campaign.orcamentoDiario
+    )} alocado proporcionalmente a ${formatPercentage(
+      campaign.participacaoFaturamentoCampanhas
+    )} do faturamento das campanhas, dentro do pool diario de R$ ${formatMoney(
+      totalDailyBudgetTarget
+    )} calculado com TACOS ${formatPercentage(tacosObjetivo)}.`
+  );
+
+  return criteria;
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toFixed(2);
+}
+
+function formatPercentage(value) {
+  return `${Number(value || 0).toFixed(2)}%`;
 }
 
 function roundToTwo(value) {

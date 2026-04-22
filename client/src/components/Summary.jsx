@@ -6,88 +6,37 @@ function Summary({ data, oportunidades, exclusoes }) {
   const [showExclusoesReport, setShowExclusoesReport] = useState(false);
   const [showExclusoes, setShowExclusoes] = useState(false);
 
-  const hasOportunidades = useMemo(() => {
-    return Boolean(oportunidades?.quantidadeProdutos > 0 && oportunidades?.campanhas?.length > 0);
+  const opportunityCampaigns = useMemo(() => {
+    return oportunidades?.campanhas || [];
   }, [oportunidades]);
 
-  const hasExclusoes = useMemo(() => {
-    if (!exclusoes) {
-      return false;
-    }
+  const hasOportunidades = useMemo(() => {
+    return Boolean(oportunidades?.quantidadeProdutos > 0 && opportunityCampaigns.length > 0);
+  }, [oportunidades, opportunityCampaigns]);
 
-    return Object.values(exclusoes).some((items) => Array.isArray(items) && items.length > 0);
-  }, [exclusoes]);
+  const exclusionGroups = useMemo(() => buildExclusionGroups(exclusoes), [exclusoes]);
+
+  const hasExclusoes = exclusionGroups.length > 0;
 
   const totalExclusoes = useMemo(() => {
-    if (!exclusoes) {
-      return 0;
-    }
-
-    return Object.values(exclusoes).reduce((total, items) => {
-      return total + (Array.isArray(items) ? items.length : 0);
-    }, 0);
-  }, [exclusoes]);
+    return exclusionGroups.reduce((total, group) => total + group.items.length, 0);
+  }, [exclusionGroups]);
 
   const opportunitiesReport = useMemo(() => {
     if (!hasOportunidades) {
       return '';
     }
 
-    return buildCampaignsReport('RELATORIO DE OPORTUNIDADES', oportunidades.campanhas, {
+    return buildCampaignsReport('RELATORIO DE OPORTUNIDADES', opportunityCampaigns, {
       quantidadeProdutos: oportunidades.quantidadeProdutos,
       orcamentoDiarioTotal: oportunidades.orcamentoDiarioTotal,
       orcamentoMensalTotal: oportunidades.orcamentoMensalTotal,
     });
-  }, [hasOportunidades, oportunidades]);
+  }, [hasOportunidades, oportunidades, opportunityCampaigns]);
 
   const exclusoesReport = useMemo(() => {
-    if (!exclusoes) {
-      return '';
-    }
-
-    let report = 'RELATORIO DE EXCLUSOES\n';
-    report += '='.repeat(60) + '\n\n';
-
-    if (exclusoes.porMargemNegativa?.length > 0) {
-      report += `MARGEM NEGATIVA (${exclusoes.porMargemNegativa.length})\n`;
-      report += '-'.repeat(60) + '\n';
-      exclusoes.porMargemNegativa.forEach((product) => {
-        report += `- ${product.name}\n`;
-        report += `  Item Id: ${product.itemId}\n`;
-        report += `  Margem: ${product.margem?.toFixed(2)}% | Faturamento: R$ ${product.faturamento?.toFixed(2)}\n\n`;
-      });
-    }
-
-    if (exclusoes.porHighAcos?.length > 0) {
-      report += `ACOS ALTO > 20% (${exclusoes.porHighAcos.length})\n`;
-      report += '-'.repeat(60) + '\n';
-      exclusoes.porHighAcos.forEach((product) => {
-        report += `- ${product.name}\n`;
-        report += `  Item Id: ${product.itemId}\n`;
-        report += `  ACOS: ${(product.acos * 100).toFixed(2)}% | Faturamento: R$ ${product.faturamento?.toFixed(2)}\n\n`;
-      });
-    }
-
-    if (exclusoes.porZeroStockComFaturamento?.length > 0) {
-      report += `ESTOQUE ZERADO (COM FATURAMENTO) (${exclusoes.porZeroStockComFaturamento.length})\n`;
-      report += '-'.repeat(60) + '\n';
-      exclusoes.porZeroStockComFaturamento.forEach((product) => {
-        report += `- ${product.name}\n`;
-        report += `  Item Id: ${product.itemId}\n`;
-        report += `  Faturamento: R$ ${product.faturamento?.toFixed(2)}\n\n`;
-      });
-    }
-
-    if (exclusoes.porZeroStockSemFaturamento?.length > 0) {
-      report += `ESTOQUE ZERADO (SEM FATURAMENTO) (${exclusoes.porZeroStockSemFaturamento.length})\n\n`;
-    }
-
-    if (exclusoes.porFaturamentoZero?.length > 0) {
-      report += `FATURAMENTO ZERO (${exclusoes.porFaturamentoZero.length})\n\n`;
-    }
-
-    return report;
-  }, [exclusoes]);
+    return buildExclusionsReport(exclusionGroups);
+  }, [exclusionGroups]);
 
   const handleCopyExclusoesReport = async () => {
     await navigator.clipboard.writeText(exclusoesReport);
@@ -186,7 +135,7 @@ function Summary({ data, oportunidades, exclusoes }) {
                 </div>
               ) : (
                 <>
-                  {oportunidades.campanhas.map((campaign, index) => (
+                  {opportunityCampaigns.map((campaign, index) => (
                     <div className="oportunidade-grupo" key={`${campaign.nome}-${index}`}>
                       <h4>{campaign.nome}</h4>
                       <p>
@@ -197,6 +146,7 @@ function Summary({ data, oportunidades, exclusoes }) {
                         Produtos: {campaign.quantidadeProdutos} | Faturamento: R$ {campaign.faturamento.toFixed(2)}
                       </p>
                       <p>MLBs: {campaign.mlbs.join(', ')}</p>
+                      {renderCriteriaList(campaign.criterios, `opportunity-${index}`)}
                     </div>
                   ))}
                 </>
@@ -250,64 +200,46 @@ function Summary({ data, oportunidades, exclusoes }) {
                 </div>
               ) : (
                 <>
-                  {exclusoes.porMargemNegativa?.length > 0 && (
-                    <div className="exclusao-grupo">
-                      <h4>Margem Negativa ({exclusoes.porMargemNegativa.length})</h4>
+                  {exclusionGroups.map((group) => (
+                    <div className="exclusao-grupo" key={group.key}>
+                      <h4>
+                        {group.title} ({group.items.length})
+                      </h4>
+                      <p className="decision-group-criterion">
+                        <strong>Criterio base:</strong> {group.groupCriterion}
+                      </p>
                       <ul>
-                        {exclusoes.porMargemNegativa.map((product, index) => (
-                          <li key={`margem-${index}`}>
-                            <strong>{product.name}</strong> | Item Id: {product.itemId} | Margem:{' '}
-                            {product.margem?.toFixed(2)}% | R$ {product.faturamento?.toFixed(2)}
+                        {group.items.map((product, index) => (
+                          <li key={`${group.key}-${product.itemId}-${index}`}>
+                            <span className="decision-item-label">{group.describe(product)}</span>
+                            <span className="decision-item-criterion">
+                              <strong>Criterio:</strong> {product.criterioDecisao || group.groupCriterion}
+                            </span>
                           </li>
                         ))}
                       </ul>
                     </div>
-                  )}
-
-                  {exclusoes.porHighAcos?.length > 0 && (
-                    <div className="exclusao-grupo">
-                      <h4>ACOS Alto &gt; 20% ({exclusoes.porHighAcos.length})</h4>
-                      <ul>
-                        {exclusoes.porHighAcos.map((product, index) => (
-                          <li key={`acos-${index}`}>
-                            <strong>{product.name}</strong> | Item Id: {product.itemId} | ACOS{' '}
-                            {(product.acos * 100).toFixed(2)}% | R$ {product.faturamento?.toFixed(2)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {exclusoes.porZeroStockComFaturamento?.length > 0 && (
-                    <div className="exclusao-grupo">
-                      <h4>Estoque Zerado (com Faturamento) ({exclusoes.porZeroStockComFaturamento.length})</h4>
-                      <ul>
-                        {exclusoes.porZeroStockComFaturamento.map((product, index) => (
-                          <li key={`zero-stock-revenue-${index}`}>
-                            <strong>{product.name}</strong> | Item Id: {product.itemId} | R$ {product.faturamento?.toFixed(2)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {exclusoes.porZeroStockSemFaturamento?.length > 0 && (
-                    <div className="exclusao-grupo">
-                      <h4>Estoque Zerado (sem Faturamento) ({exclusoes.porZeroStockSemFaturamento.length})</h4>
-                    </div>
-                  )}
-
-                  {exclusoes.porFaturamentoZero?.length > 0 && (
-                    <div className="exclusao-grupo">
-                      <h4>Faturamento Zero ({exclusoes.porFaturamentoZero.length})</h4>
-                    </div>
-                  )}
+                  ))}
                 </>
               ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function renderCriteriaList(criteria, keyPrefix) {
+  if (!criteria?.length) {
+    return null;
+  }
+
+  return (
+    <ul className="decision-criteria">
+      {criteria.map((criterion, index) => (
+        <li key={`${keyPrefix}-${index}`}>{criterion}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -341,6 +273,87 @@ function buildCampaignsReport(title, campaigns, totals) {
   report += '='.repeat(60) + '\n';
 
   return report;
+}
+
+function buildExclusionsReport(groups) {
+  if (!groups.length) {
+    return '';
+  }
+
+  let report = 'RELATORIO DE EXCLUSOES\n';
+  report += '='.repeat(60) + '\n\n';
+
+  groups.forEach((group) => {
+    report += `${group.title} (${group.items.length})\n`;
+    report += '-'.repeat(60) + '\n';
+
+    group.items.forEach((product) => {
+      report += `- ${group.describe(product)}\n`;
+      report += '\n';
+    });
+  });
+
+  return report;
+}
+
+function buildExclusionGroups(exclusoes) {
+  if (!exclusoes) {
+    return [];
+  }
+
+  return [
+    {
+      key: 'porMargemNegativa',
+      title: 'Margem Negativa',
+      groupCriterion:
+        'Margem abaixo de 0% apos o produto passar por estoque disponivel e ACOS ate 20%.',
+      items: exclusoes.porMargemNegativa || [],
+      describe: (product) =>
+        `${product.name} | Item Id: ${product.itemId} | Margem: ${formatPercent(product.margem)} | R$ ${formatMoney(product.faturamento)}`,
+    },
+    {
+      key: 'porHighAcos',
+      title: 'ACOS Alto > 20%',
+      groupCriterion: 'ACOS acima de 20% entre produtos com estoque disponivel.',
+      items: exclusoes.porHighAcos || [],
+      describe: (product) =>
+        `${product.name} | Item Id: ${product.itemId} | ACOS: ${formatPercent(product.acos * 100)} | R$ ${formatMoney(product.faturamento)}`,
+    },
+    {
+      key: 'porZeroStockComFaturamento',
+      title: 'Estoque Zerado (com Faturamento)',
+      groupCriterion:
+        'Estoque principal, seller e full zerados ao mesmo tempo, mesmo com faturamento acima de zero.',
+      items: exclusoes.porZeroStockComFaturamento || [],
+      describe: (product) =>
+        `${product.name} | Item Id: ${product.itemId} | R$ ${formatMoney(product.faturamento)}`,
+    },
+    {
+      key: 'porZeroStockSemFaturamento',
+      title: 'Estoque Zerado (sem Faturamento)',
+      groupCriterion:
+        'Estoque principal, seller e full zerados ao mesmo tempo, com faturamento igual a zero.',
+      items: exclusoes.porZeroStockSemFaturamento || [],
+      describe: (product) => `${product.name} | Item Id: ${product.itemId}`,
+    },
+    {
+      key: 'porFaturamentoZero',
+      title: 'Faturamento Zero',
+      groupCriterion:
+        'Faturamento igual a zero depois de passar por estoque disponivel, ACOS ate 20% e margem nao negativa.',
+      items: exclusoes.porFaturamentoZero || [],
+      describe: (product) =>
+        `${product.name} | Item Id: ${product.itemId} | Margem: ${formatPercent(product.margem)}`,
+    },
+  ].filter((group) => group.items.length > 0);
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toFixed(2);
+}
+
+function formatPercent(value) {
+  return `${Number(value || 0).toFixed(2)}%`;
 }
 
 export default Summary;

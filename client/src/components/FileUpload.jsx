@@ -28,7 +28,9 @@ function FileUpload({ onUpload, loading }) {
 
   return (
     <div className="file-upload">
-      <div className="tacos-notice">ℹ️  Preencha o <strong>TACOS (%)</strong> antes de enviar a planilha</div>
+      <div className="tacos-notice">
+        Preencha o <strong>TACOS ALINHADO (%)</strong> antes de enviar a planilha
+      </div>
       <div className="upload-box" onClick={handleClick}>
         {loading ? (
           <>
@@ -40,9 +42,7 @@ function FileUpload({ onUpload, loading }) {
             <div className="upload-icon">📊</div>
             <h2>Envie sua planilha de rentabilidade</h2>
             <p>Clique para selecionar um arquivo .xlsx</p>
-            <span className="file-info">
-              Formato aceito: Excel (.xlsx, .xls)
-            </span>
+            <span className="file-info">Formato aceito: Excel (.xlsx, .xls)</span>
           </>
         )}
       </div>
@@ -62,9 +62,7 @@ function FileUpload({ onUpload, loading }) {
             onChange={(e) => setTacos(e.target.value)}
             disabled={loading}
           />
-          <span className="tacos-help">
-            % do faturamento total a investir mensalmente em ADS
-          </span>
+          <span className="tacos-help">% do faturamento total a investir mensalmente em ADS</span>
         </div>
       </div>
 

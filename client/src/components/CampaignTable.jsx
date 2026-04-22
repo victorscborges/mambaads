@@ -78,6 +78,13 @@ function CampaignTable({ campaigns }) {
               <tr key={`${campaign.nome}-${index}`}>
                 <td>
                   <span className="campaign-name">{campaign.nome}</span>
+                  {campaign.criterios?.length > 0 && (
+                    <ul className="decision-criteria campaign-criteria">
+                      {campaign.criterios.map((criterion, criteriaIndex) => (
+                        <li key={`${campaign.nome}-criterion-${criteriaIndex}`}>{criterion}</li>
+                      ))}
+                    </ul>
+                  )}
                 </td>
                 <td>
                   <span className={`campaign-type ${campaign.tipo.toLowerCase()}`}>{campaign.tipo}</span>
