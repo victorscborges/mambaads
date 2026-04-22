@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import DecisionPopover from './DecisionPopover';
 
 function Summary({ data, oportunidades, exclusoes }) {
   const [showOpportunities, setShowOpportunities] = useState(false);
@@ -139,14 +140,22 @@ function Summary({ data, oportunidades, exclusoes }) {
                     <div className="oportunidade-grupo" key={`${campaign.nome}-${index}`}>
                       <h4>{campaign.nome}</h4>
                       <p>
-                        Tipo: {campaign.tipo} | ROAS Objetivo: {campaign.roasObjetivo}x | Orcamento Diario: R${' '}
-                        {campaign.orcamentoDiario.toFixed(2)}
+                        <span className="decision-inline">
+                          <span>
+                            Tipo: <span className={`campaign-type ${campaign.tipo.toLowerCase()}`}>{campaign.tipo}</span>
+                          </span>
+                          <DecisionPopover
+                            content={campaign.criterios}
+                            label={`Ver criterio da oportunidade ${campaign.nome}`}
+                            title={`Criterios de ${campaign.nome}`}
+                          />
+                        </span>{' '}
+                        | ROAS Objetivo: {campaign.roasObjetivo}x | Orcamento Diario: R$ {campaign.orcamentoDiario.toFixed(2)}
                       </p>
                       <p>
                         Produtos: {campaign.quantidadeProdutos} | Faturamento: R$ {campaign.faturamento.toFixed(2)}
                       </p>
                       <p>MLBs: {campaign.mlbs.join(', ')}</p>
-                      {renderCriteriaList(campaign.criterios, `opportunity-${index}`)}
                     </div>
                   ))}
                 </>
@@ -202,22 +211,32 @@ function Summary({ data, oportunidades, exclusoes }) {
                 <>
                   {exclusionGroups.map((group) => (
                     <div className="exclusao-grupo" key={group.key}>
-                      <h4>
-                        {group.title} ({group.items.length})
-                      </h4>
-                      <p className="decision-group-criterion">
-                        <strong>Criterio base:</strong> {group.groupCriterion}
-                      </p>
-                      <ul>
-                        {group.items.map((product, index) => (
-                          <li key={`${group.key}-${product.itemId}-${index}`}>
-                            <span className="decision-item-label">{group.describe(product)}</span>
-                            <span className="decision-item-criterion">
-                              <strong>Criterio:</strong> {product.criterioDecisao || group.groupCriterion}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="decision-group-header">
+                        <h4>
+                          {group.title} ({group.items.length})
+                        </h4>
+                        <DecisionPopover
+                          content={group.groupCriterion}
+                          label={`Ver criterio de ${group.title}`}
+                          title={`Criterio de ${group.title}`}
+                        />
+                      </div>
+                      {group.showItems && (
+                        <ul>
+                          {group.items.map((product, index) => (
+                            <li key={`${group.key}-${product.itemId}-${index}`}>
+                              <div className="decision-row-line">
+                                <span className="decision-item-label">{group.describe(product)}</span>
+                                <DecisionPopover
+                                  content={product.criterioDecisao || group.groupCriterion}
+                                  label={`Ver criterio do item ${product.name}`}
+                                  title={`Criterio de ${product.name}`}
+                                />
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   ))}
                 </>
@@ -226,20 +245,6 @@ function Summary({ data, oportunidades, exclusoes }) {
         </div>
       )}
     </div>
-  );
-}
-
-function renderCriteriaList(criteria, keyPrefix) {
-  if (!criteria?.length) {
-    return null;
-  }
-
-  return (
-    <ul className="decision-criteria">
-      {criteria.map((criterion, index) => (
-        <li key={`${keyPrefix}-${index}`}>{criterion}</li>
-      ))}
-    </ul>
   );
 }
 
@@ -287,10 +292,14 @@ function buildExclusionsReport(groups) {
     report += `${group.title} (${group.items.length})\n`;
     report += '-'.repeat(60) + '\n';
 
-    group.items.forEach((product) => {
-      report += `- ${group.describe(product)}\n`;
+    if (group.includeItemsInReport) {
+      group.items.forEach((product) => {
+        report += `- ${group.describe(product)}\n`;
+        report += '\n';
+      });
+    } else {
       report += '\n';
-    });
+    }
   });
 
   return report;
@@ -308,6 +317,8 @@ function buildExclusionGroups(exclusoes) {
       groupCriterion:
         'Margem abaixo de 0% apos o produto passar por estoque disponivel e ACOS ate 20%.',
       items: exclusoes.porMargemNegativa || [],
+      showItems: true,
+      includeItemsInReport: true,
       describe: (product) =>
         `${product.name} | Item Id: ${product.itemId} | Margem: ${formatPercent(product.margem)} | R$ ${formatMoney(product.faturamento)}`,
     },
@@ -316,6 +327,8 @@ function buildExclusionGroups(exclusoes) {
       title: 'ACOS Alto > 20%',
       groupCriterion: 'ACOS acima de 20% entre produtos com estoque disponivel.',
       items: exclusoes.porHighAcos || [],
+      showItems: true,
+      includeItemsInReport: true,
       describe: (product) =>
         `${product.name} | Item Id: ${product.itemId} | ACOS: ${formatPercent(product.acos * 100)} | R$ ${formatMoney(product.faturamento)}`,
     },
@@ -325,6 +338,8 @@ function buildExclusionGroups(exclusoes) {
       groupCriterion:
         'Estoque principal, seller e full zerados ao mesmo tempo, mesmo com faturamento acima de zero.',
       items: exclusoes.porZeroStockComFaturamento || [],
+      showItems: true,
+      includeItemsInReport: true,
       describe: (product) =>
         `${product.name} | Item Id: ${product.itemId} | R$ ${formatMoney(product.faturamento)}`,
     },
@@ -334,6 +349,8 @@ function buildExclusionGroups(exclusoes) {
       groupCriterion:
         'Estoque principal, seller e full zerados ao mesmo tempo, com faturamento igual a zero.',
       items: exclusoes.porZeroStockSemFaturamento || [],
+      showItems: false,
+      includeItemsInReport: false,
       describe: (product) => `${product.name} | Item Id: ${product.itemId}`,
     },
     {
@@ -342,6 +359,8 @@ function buildExclusionGroups(exclusoes) {
       groupCriterion:
         'Faturamento igual a zero depois de passar por estoque disponivel, ACOS ate 20% e margem nao negativa.',
       items: exclusoes.porFaturamentoZero || [],
+      showItems: false,
+      includeItemsInReport: false,
       describe: (product) =>
         `${product.name} | Item Id: ${product.itemId} | Margem: ${formatPercent(product.margem)}`,
     },

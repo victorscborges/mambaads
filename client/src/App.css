@@ -203,6 +203,7 @@ table td {
   border-bottom: 1px solid #e9ecef;
   color: #1a1a1a;
   font-size: 1em;
+  vertical-align: top;
 }
 
 table tbody tr {
@@ -257,6 +258,12 @@ table tbody tr:nth-child(even) {
 .budget-value {
   font-weight: 600;
   color: #28a745;
+}
+
+.campaign-type-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Seção de Exclusões */
@@ -385,39 +392,106 @@ table tbody tr:nth-child(even) {
   font-size: 0.95em;
 }
 
-.decision-criteria {
-  margin: 10px 0 0 0;
+.decision-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.decision-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.decision-group-header h4 {
+  margin: 0;
+}
+
+.decision-row-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.decision-item-label {
+  display: block;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.decision-popover {
+  display: inline-flex;
+  align-items: center;
+}
+
+.decision-popover-trigger {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #fdb927;
+  border-radius: 999px;
+  background: #fff8dc;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.95em;
+  line-height: 1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.decision-popover-trigger:hover,
+.decision-popover-trigger:focus-visible {
+  background: #fef3c7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(253, 185, 39, 0.28);
+  outline: none;
+}
+
+.decision-popover-panel {
+  position: fixed;
+  z-index: 9999;
+  width: min(320px, calc(100vw - 24px));
+  background: #1f2937;
+  color: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid rgba(253, 185, 39, 0.55);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+  padding: 14px 16px;
+}
+
+.decision-popover-title {
+  font-size: 0.82em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #fdb927;
+  margin-bottom: 10px;
+}
+
+.decision-popover-text {
+  margin: 0;
+  font-size: 0.92em;
+  line-height: 1.55;
+}
+
+.decision-popover-list {
+  margin: 0;
   padding-left: 18px;
 }
 
-.decision-criteria li {
-  margin-bottom: 6px;
-  font-size: 0.9em;
-  line-height: 1.5;
+.decision-popover-list li {
+  margin-bottom: 8px;
+  font-size: 0.92em;
+  line-height: 1.55;
 }
 
-.oportunidade-grupo .decision-criteria li,
-.campaign-criteria li {
-  color: #166534;
-}
-
-.campaign-criteria {
-  margin-top: 10px;
-}
-
-.decision-group-criterion {
-  margin: 8px 0 10px 0;
-  line-height: 1.5;
-}
-
-.decision-item-label,
-.decision-item-criterion {
-  display: block;
-  line-height: 1.5;
-}
-
-.decision-item-criterion {
-  margin-top: 4px;
+.decision-popover-list li:last-child {
+  margin-bottom: 0;
 }
 
 .exclusoes-header {
@@ -482,5 +556,13 @@ table tbody tr:nth-child(even) {
   table th,
   table td {
     padding: 8px;
+  }
+
+  .decision-inline {
+    flex-wrap: wrap;
+  }
+
+  .decision-row-line {
+    gap: 8px;
   }
 }

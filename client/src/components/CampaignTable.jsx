@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import DecisionPopover from './DecisionPopover';
 
 function CampaignTable({ campaigns }) {
   const [showReport, setShowReport] = useState(false);
@@ -78,16 +79,16 @@ function CampaignTable({ campaigns }) {
               <tr key={`${campaign.nome}-${index}`}>
                 <td>
                   <span className="campaign-name">{campaign.nome}</span>
-                  {campaign.criterios?.length > 0 && (
-                    <ul className="decision-criteria campaign-criteria">
-                      {campaign.criterios.map((criterion, criteriaIndex) => (
-                        <li key={`${campaign.nome}-criterion-${criteriaIndex}`}>{criterion}</li>
-                      ))}
-                    </ul>
-                  )}
                 </td>
                 <td>
-                  <span className={`campaign-type ${campaign.tipo.toLowerCase()}`}>{campaign.tipo}</span>
+                  <div className="campaign-type-cell">
+                    <span className={`campaign-type ${campaign.tipo.toLowerCase()}`}>{campaign.tipo}</span>
+                    <DecisionPopover
+                      content={campaign.criterios}
+                      label={`Ver criterio da campanha ${campaign.nome}`}
+                      title={`Criterios de ${campaign.nome}`}
+                    />
+                  </div>
                 </td>
                 <td>
                   <span className="roas-badge">{campaign.roasObjetivo}x</span>
