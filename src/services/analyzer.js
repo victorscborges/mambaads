@@ -36,11 +36,11 @@ export async function analyzeSpreadsheet(buffer, tacosObjetivo = 5) {
 
   const totalRevenue = data.reduce((sum, row) => sum + getNumericCell(row, REVENUE_HEADERS), 0);
 
-  const products = data.map((row) => {
+  const products = data.map((row, rowIndex) => {
     const revenue = getNumericCell(row, REVENUE_HEADERS);
     const revenuePercentage = totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0;
 
-    let margin = getNumericCell(row, MARGIN_PERCENT_HEADERS);
+    let margin = getPercentAwareNumericCell(row, rowIndex, worksheet, headers, MARGIN_PERCENT_HEADERS);
     if (margin === 0) {
       const marginValue = getNumericCell(row, MARGIN_VALUE_HEADERS);
       if (marginValue !== 0 && revenue > 0) {
@@ -241,6 +241,37 @@ function getNumericCell(row, candidates) {
   return normalizeNumber(rawValue);
 }
 
+function getPercentAwareNumericCell(row, rowIndex, worksheet, headers, candidates) {
+  const rawValue = getFirstDefinedValue(row, candidates);
+  const numericValue = normalizeNumber(rawValue);
+  const matchedHeader = getMatchedHeaderKey(headers, candidates);
+
+  if (!matchedHeader) {
+    return numericValue;
+  }
+
+  const columnIndex = headers.findIndex((header) => header === matchedHeader);
+  if (columnIndex < 0) {
+    return numericValue;
+  }
+
+  const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: columnIndex });
+  const cell = worksheet[cellAddress];
+  if (!cell) {
+    return numericValue;
+  }
+
+  if (typeof cell.w === 'string' && cell.w.includes('%')) {
+    return normalizeNumber(cell.w);
+  }
+
+  if (typeof cell.z === 'string' && cell.z.includes('%')) {
+    return numericValue * 100;
+  }
+
+  return numericValue;
+}
+
 function getTextCell(row, candidates, fallback = '') {
   const rawValue = getFirstDefinedValue(row, candidates);
   if (rawValue === undefined || rawValue === null || rawValue === '') {
@@ -262,6 +293,19 @@ function getFirstDefinedValue(row, candidates) {
   }
 
   return undefined;
+}
+
+function getMatchedHeaderKey(headers, candidates) {
+  for (const candidate of candidates) {
+    const normalizedCandidate = normalizeHeader(candidate);
+    const matchedHeader = headers.find((header) => normalizeHeader(header) === normalizedCandidate);
+
+    if (matchedHeader) {
+      return matchedHeader;
+    }
+  }
+
+  return null;
 }
 
 function normalizeHeader(value) {
