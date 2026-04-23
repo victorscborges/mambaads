@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-function DecisionPopover({ content, label = 'Ver criterio', title = 'Criterio da decisao' }) {
+function DecisionPopover({ content, label = 'Ver leitura da decisao', title = 'Leitura da decisao' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isPositionReady, setIsPositionReady] = useState(false);
@@ -9,6 +9,7 @@ function DecisionPopover({ content, label = 'Ver criterio', title = 'Criterio da
   const panelRef = useRef(null);
 
   const items = Array.isArray(content) ? content.filter(Boolean) : [content].filter(Boolean);
+  const hasStructuredItems = items.every(isStructuredDecisionItem);
   const hasItems = items.length > 0;
 
   const updatePosition = () => {
@@ -122,7 +123,16 @@ function DecisionPopover({ content, label = 'Ver criterio', title = 'Criterio da
             aria-label={title}
           >
             <div className="decision-popover-title">{title}</div>
-            {items.length === 1 ? (
+            {hasStructuredItems ? (
+              <div className="decision-popover-sections">
+                {items.map((item, index) => (
+                  <section className="decision-popover-section" key={`${title}-${item.heading}-${index}`}>
+                    <div className="decision-popover-section-title">{item.heading}</div>
+                    <p className="decision-popover-section-text">{item.text}</p>
+                  </section>
+                ))}
+              </div>
+            ) : items.length === 1 ? (
               <p className="decision-popover-text">{items[0]}</p>
             ) : (
               <ul className="decision-popover-list">
@@ -135,6 +145,17 @@ function DecisionPopover({ content, label = 'Ver criterio', title = 'Criterio da
           document.body
         )}
     </>
+  );
+}
+
+function isStructuredDecisionItem(item) {
+  return Boolean(
+    item &&
+      typeof item === 'object' &&
+      typeof item.heading === 'string' &&
+      item.heading &&
+      typeof item.text === 'string' &&
+      item.text
   );
 }
 

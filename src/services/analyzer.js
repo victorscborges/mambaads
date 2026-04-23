@@ -386,80 +386,81 @@ function annotateExcludedProducts(products, reason) {
 function buildExclusionCriterion(product, reason) {
   switch (reason) {
     case 'margem-negativa':
-      return `Margem abaixo de 0% (${formatPercentage(product.margem)}), apos manter apenas produtos com estoque disponivel e ACOS ate ${formatPercentage(MAX_ACOS * 100)}.`;
+      return `Leitura rapida: o produto passou por estoque e ACOS, mas a margem fechou em ${formatPercentage(
+        product.margem
+      )}. Hoje, investir nele tende a pressionar o lucro em vez de escalar resultado.`;
     case 'high-acos':
-      return `ACOS acima de ${formatPercentage(MAX_ACOS * 100)} (${formatPercentage(product.acos * 100)}), considerando apenas produtos com estoque disponivel.`;
+      return `Leitura rapida: o produto tem estoque, mas o ACOS ficou em ${formatPercentage(
+        product.acos * 100
+      )}, acima do limite de ${formatPercentage(
+        MAX_ACOS * 100
+      )}. Neste momento, o custo de anuncio esta pesado para sustentar a campanha.`;
     case 'faturamento-zero':
-      return `Faturamento igual a R$ ${formatMoney(product.faturamento)} apos passar por estoque disponivel, ACOS ate ${formatPercentage(MAX_ACOS * 100)} e margem nao negativa.`;
+      return `Leitura rapida: o produto passou nos filtros anteriores, mas encerrou o periodo com faturamento de R$ ${formatMoney(
+        product.faturamento
+      )}. Sem tracao recente, nao temos base para manter investimento agora.`;
     case 'zero-stock-com-faturamento':
-      return `Estoque zerado em todos os pontos (principal ${product.estoquePrincipal}, seller ${product.estoqueSeller} e full ${product.estoqueFull}) com faturamento acima de zero (R$ ${formatMoney(product.faturamento)}).`;
+      return `Leitura rapida: houve faturamento de R$ ${formatMoney(
+        product.faturamento
+      )}, mas o item esta zerado em principal ${product.estoquePrincipal}, seller ${product.estoqueSeller} e full ${product.estoqueFull}. Como nao ha disponibilidade, nao faz sentido direcionar verba agora.`;
     case 'zero-stock-sem-faturamento':
-      return `Estoque zerado em todos os pontos (principal ${product.estoquePrincipal}, seller ${product.estoqueSeller} e full ${product.estoqueFull}) com faturamento igual a R$ ${formatMoney(product.faturamento)}.`;
+      return `Leitura rapida: o item esta sem faturamento e sem estoque em principal ${product.estoquePrincipal}, seller ${product.estoqueSeller} e full ${product.estoqueFull}. Por isso ele sai da analise logo no comeco.`;
     default:
       return 'Produto fora da campanha final pelos filtros de elegibilidade da analise.';
   }
 }
 
 function buildCampaignCriteria(campaign, tacosObjetivo, totalDailyBudgetTarget) {
-  const criteria = [];
+  const entryContext =
+    campaign.tipoAnalise === 'oportunidades'
+      ? `Entrou como oportunidade porque ainda nao investe em ADS, mas ja mostra potencial: manteve estoque disponivel, ficou com ACOS ate ${formatPercentage(
+          MAX_ACOS * 100
+        )}, margem nao negativa e faturamento acima de zero.`
+      : `Entrou na campanha final porque passou no filtro base da analise: estoque disponivel, ACOS ate ${formatPercentage(
+          MAX_ACOS * 100
+        )}, margem nao negativa e faturamento acima de zero.`;
 
-  if (campaign.tipoAnalise === 'oportunidades') {
-    criteria.push(
-      `Oportunidade criada apenas com produtos sem investimento em ADS, que ainda mantiveram estoque disponivel, ACOS ate ${formatPercentage(
-        MAX_ACOS * 100
-      )}, margem nao negativa e faturamento acima de zero.`
-    );
-  } else {
-    criteria.push(
-      `Campanha final composta apenas por produtos com estoque disponivel, ACOS ate ${formatPercentage(
-        MAX_ACOS * 100
-      )}, margem nao negativa e faturamento acima de zero.`
-    );
-  }
+  const strategyContext =
+    campaign.tipo === 'Isolada'
+      ? `Como esse produto sozinho representa ${formatPercentage(
+          campaign.participacaoFaturamentoTotal
+        )} do faturamento total e passou do corte de ${formatPercentage(
+          ISOLATED_REVENUE_THRESHOLD
+        )}, ele ganhou uma campanha propria.`
+      : `Como cada item desse grupo representa menos de ${formatPercentage(
+          ISOLATED_REVENUE_THRESHOLD
+        )} do faturamento total${buildTicketRangeText(campaign.faixaTicket)} e todos compartilham a curva ${
+          campaign.curva
+        }, trabalhar em bloco ficou mais eficiente.`;
 
-  criteria.push(
-    `Curva ${campaign.curva} definida pela classificacao ABC de faturamento acumulado: ate ${formatPercentage(
-      CURVE_A_CUMULATIVE_THRESHOLD
-    )} para A, ate ${formatPercentage(CURVE_B_CUMULATIVE_THRESHOLD)} para B e restante em C.`
-  );
+  return [
+    {
+      heading: 'Por que entrou',
+      text: `${entryContext} ${strategyContext}`,
+    },
+    {
+      heading: 'Como foi posicionada',
+      text: `A campanha ficou na curva ${campaign.curva} pela leitura ABC do faturamento acumulado: A concentra ate ${formatPercentage(
+        CURVE_A_CUMULATIVE_THRESHOLD
+      )}, B vai ate ${formatPercentage(CURVE_B_CUMULATIVE_THRESHOLD)} e o restante fica em C. Dentro dessa curva, ela responde por ${formatPercentage(
+        campaign.participacaoNaCurva
+      )} do faturamento, por isso o ROAS alvo ficou em ${campaign.roasObjetivo}x.`,
+    },
+    {
+      heading: 'Quanto sugerimos investir',
+      text: `O orcamento diario sugerido e de R$ ${formatMoney(
+        campaign.orcamentoDiario
+      )}. Esse valor vem da fatia de ${formatPercentage(
+        campaign.participacaoFaturamentoCampanhas
+      )} que a campanha ocupa no faturamento total das campanhas, dentro de um pool diario de R$ ${formatMoney(
+        totalDailyBudgetTarget
+      )}, calculado com TACOS de ${formatPercentage(tacosObjetivo)}.`,
+    },
+  ];
+}
 
-  if (campaign.tipo === 'Isolada') {
-    criteria.push(
-      `Campanha isolada porque o produto representa ${formatPercentage(
-        campaign.participacaoFaturamentoTotal
-      )} do faturamento total, atingindo o corte minimo de ${formatPercentage(
-        ISOLATED_REVENUE_THRESHOLD
-      )}.`
-    );
-  } else {
-    const faixaTicketText = campaign.faixaTicket
-      ? ` e compartilham a faixa de ticket ${campaign.faixaTicket}`
-      : '';
-
-    criteria.push(
-      `Campanha agrupada porque os produtos do grupo ficaram abaixo de ${formatPercentage(
-        ISOLATED_REVENUE_THRESHOLD
-      )} do faturamento total por item${faixaTicketText}, alem da mesma curva ${campaign.curva}.`
-    );
-  }
-
-  criteria.push(
-    `ROAS objetivo de ${campaign.roasObjetivo}x definido pela curva ${campaign.curva} e pela participacao de ${formatPercentage(
-      campaign.participacaoNaCurva
-    )} dentro da propria curva.`
-  );
-
-  criteria.push(
-    `Orcamento diario de R$ ${formatMoney(
-      campaign.orcamentoDiario
-    )} alocado proporcionalmente a ${formatPercentage(
-      campaign.participacaoFaturamentoCampanhas
-    )} do faturamento das campanhas, dentro do pool diario de R$ ${formatMoney(
-      totalDailyBudgetTarget
-    )} calculado com TACOS ${formatPercentage(tacosObjetivo)}.`
-  );
-
-  return criteria;
+function buildTicketRangeText(ticketRange) {
+  return ticketRange ? `, estao na mesma faixa de ticket ${ticketRange}` : '';
 }
 
 function formatMoney(value) {

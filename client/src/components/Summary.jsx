@@ -146,8 +146,8 @@ function Summary({ data, oportunidades, exclusoes }) {
                           </span>
                           <DecisionPopover
                             content={campaign.criterios}
-                            label={`Ver criterio da oportunidade ${campaign.nome}`}
-                            title={`Criterios de ${campaign.nome}`}
+                            label={`Ver leitura da oportunidade ${campaign.nome}`}
+                            title={`Leitura da oportunidade ${campaign.nome}`}
                           />
                         </span>{' '}
                         | ROAS Objetivo: {campaign.roasObjetivo}x | Orcamento Diario: R$ {campaign.orcamentoDiario.toFixed(2)}
@@ -217,8 +217,8 @@ function Summary({ data, oportunidades, exclusoes }) {
                         </h4>
                         <DecisionPopover
                           content={group.groupCriterion}
-                          label={`Ver criterio de ${group.title}`}
-                          title={`Criterio de ${group.title}`}
+                          label={`Ver leitura de ${group.title}`}
+                          title={`Leitura de ${group.title}`}
                         />
                       </div>
                       {group.showItems && (
@@ -229,8 +229,8 @@ function Summary({ data, oportunidades, exclusoes }) {
                                 <span className="decision-item-label">{group.describe(product)}</span>
                                 <DecisionPopover
                                   content={product.criterioDecisao || group.groupCriterion}
-                                  label={`Ver criterio do item ${product.name}`}
-                                  title={`Criterio de ${product.name}`}
+                                  label={`Ver leitura de ${product.name}`}
+                                  title={`Leitura de ${product.name}`}
                                 />
                               </div>
                             </li>
@@ -315,7 +315,7 @@ function buildExclusionGroups(exclusoes) {
       key: 'porMargemNegativa',
       title: 'Margem Negativa',
       groupCriterion:
-        'Margem abaixo de 0% apos o produto passar por estoque disponivel e ACOS ate 20%.',
+        'Leitura da categoria: os itens passaram por estoque e ACOS, mas a margem fechou negativa. Neste momento, anunciar tende a pressionar a rentabilidade.',
       items: exclusoes.porMargemNegativa || [],
       showItems: true,
       includeItemsInReport: true,
@@ -325,7 +325,8 @@ function buildExclusionGroups(exclusoes) {
     {
       key: 'porHighAcos',
       title: 'ACOS Alto > 20%',
-      groupCriterion: 'ACOS acima de 20% entre produtos com estoque disponivel.',
+      groupCriterion:
+        'Leitura da categoria: os itens tem estoque, mas o custo de anuncio passou do teto de 20% do faturamento. Antes de escalar, o ACOS precisa voltar para uma faixa mais saudavel.',
       items: exclusoes.porHighAcos || [],
       showItems: true,
       includeItemsInReport: true,
@@ -336,7 +337,7 @@ function buildExclusionGroups(exclusoes) {
       key: 'porZeroStockComFaturamento',
       title: 'Estoque Zerado (com Faturamento)',
       groupCriterion:
-        'Estoque principal, seller e full zerados ao mesmo tempo, mesmo com faturamento acima de zero.',
+        'Leitura da categoria: existe demanda, mas nao existe disponibilidade. Mesmo com faturamento, os itens estao zerados em principal, seller e full, entao a verba fica pausada.',
       items: exclusoes.porZeroStockComFaturamento || [],
       showItems: true,
       includeItemsInReport: true,
@@ -347,7 +348,7 @@ function buildExclusionGroups(exclusoes) {
       key: 'porZeroStockSemFaturamento',
       title: 'Estoque Zerado (sem Faturamento)',
       groupCriterion:
-        'Estoque principal, seller e full zerados ao mesmo tempo, com faturamento igual a zero.',
+        'Leitura da categoria: sem faturamento e sem estoque em nenhum ponto, esses itens saem da analise logo no inicio.',
       items: exclusoes.porZeroStockSemFaturamento || [],
       showItems: false,
       includeItemsInReport: false,
@@ -357,7 +358,7 @@ function buildExclusionGroups(exclusoes) {
       key: 'porFaturamentoZero',
       title: 'Faturamento Zero',
       groupCriterion:
-        'Faturamento igual a zero depois de passar por estoque disponivel, ACOS ate 20% e margem nao negativa.',
+        'Leitura da categoria: os itens passaram nos filtros tecnicos, mas nao trouxeram faturamento no periodo. Sem tracao recente, nao faz sentido manter verba agora.',
       items: exclusoes.porFaturamentoZero || [],
       showItems: false,
       includeItemsInReport: false,

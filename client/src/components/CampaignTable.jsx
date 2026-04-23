@@ -85,8 +85,8 @@ function CampaignTable({ campaigns }) {
                     <span className={`campaign-type ${campaign.tipo.toLowerCase()}`}>{campaign.tipo}</span>
                     <DecisionPopover
                       content={campaign.criterios}
-                      label={`Ver criterio da campanha ${campaign.nome}`}
-                      title={`Criterios de ${campaign.nome}`}
+                      label={`Ver leitura da campanha ${campaign.nome}`}
+                      title={`Leitura da campanha ${campaign.nome}`}
                     />
                   </div>
                 </td>

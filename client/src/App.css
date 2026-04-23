@@ -479,6 +479,34 @@ table tbody tr:nth-child(even) {
   line-height: 1.55;
 }
 
+.decision-popover-sections {
+  display: grid;
+  gap: 10px;
+}
+
+.decision-popover-section {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(253, 185, 39, 0.18);
+}
+
+.decision-popover-section-title {
+  font-size: 0.76em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fde68a;
+  margin-bottom: 6px;
+}
+
+.decision-popover-section-text {
+  margin: 0;
+  font-size: 0.91em;
+  line-height: 1.55;
+  color: #f9fafb;
+}
+
 .decision-popover-list {
   margin: 0;
   padding-left: 18px;
