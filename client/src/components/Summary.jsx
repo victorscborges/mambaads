@@ -320,7 +320,7 @@ function buildExclusionGroups(exclusoes) {
       showItems: true,
       includeItemsInReport: true,
       describe: (product) =>
-        `${product.name} | Item Id: ${product.itemId} | Margem: ${formatPercent(product.margem)} | R$ ${formatMoney(product.faturamento)}`,
+        `${product.name} | Item Id: ${product.itemId} | Margem: ${formatMarginPercent(product.margem)} | R$ ${formatMoney(product.faturamento)}`,
     },
     {
       key: 'porHighAcos',
@@ -363,7 +363,7 @@ function buildExclusionGroups(exclusoes) {
       showItems: false,
       includeItemsInReport: false,
       describe: (product) =>
-        `${product.name} | Item Id: ${product.itemId} | Margem: ${formatPercent(product.margem)}`,
+        `${product.name} | Item Id: ${product.itemId} | Margem: ${formatMarginPercent(product.margem)}`,
     },
   ].filter((group) => group.items.length > 0);
 }
@@ -374,6 +374,14 @@ function formatMoney(value) {
 
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(2)}%`;
+}
+
+function formatMarginPercent(value) {
+  const numericValue = Number(value || 0);
+  const normalizedValue =
+    numericValue !== 0 && Math.abs(numericValue) < 1 ? numericValue * 100 : numericValue;
+
+  return `${normalizedValue.toFixed(2)}%`;
 }
 
 export default Summary;

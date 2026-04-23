@@ -430,7 +430,7 @@ function annotateExcludedProducts(products, reason) {
 function buildExclusionCriterion(product, reason) {
   switch (reason) {
     case 'margem-negativa':
-      return `Leitura rapida: o produto passou por estoque e ACOS, mas a margem fechou em ${formatPercentage(
+      return `Leitura rapida: o produto passou por estoque e ACOS, mas a margem fechou em ${formatMarginPercentage(
         product.margem
       )}. Hoje, investir nele tende a pressionar o lucro em vez de escalar resultado.`;
     case 'high-acos':
@@ -513,6 +513,14 @@ function formatMoney(value) {
 
 function formatPercentage(value) {
   return `${Number(value || 0).toFixed(2)}%`;
+}
+
+function formatMarginPercentage(value) {
+  const numericValue = Number(value || 0);
+  const normalizedValue =
+    numericValue !== 0 && Math.abs(numericValue) < 1 ? numericValue * 100 : numericValue;
+
+  return `${normalizedValue.toFixed(2)}%`;
 }
 
 function roundToTwo(value) {
